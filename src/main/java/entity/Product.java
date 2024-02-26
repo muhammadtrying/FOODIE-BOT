@@ -13,7 +13,9 @@ import java.util.UUID;
 @Builder
 public class Product implements NameFetcher {
     private final UUID id = UUID.randomUUID();
-    private String name;
+    private String nameInUzbek;
+    private String nameInEnglish;
+    private String nameInRussian;
     private Integer retailPrice;
     private Integer originalPrice;
     private UUID categoryId;
@@ -22,7 +24,15 @@ public class Product implements NameFetcher {
     private String description;
 
     @Override
-    public String getTitle() {
-        return name;
+    public String getTitle(TelegramUser telegramUser) {
+        switch (telegramUser.getLanguage()) {
+            case EN -> {
+                return nameInEnglish;
+            }
+            case RU -> {
+                return nameInRussian;
+            }
+        }
+        return nameInUzbek;
     }
 }

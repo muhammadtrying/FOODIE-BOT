@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 import static bot.MyBot.telegramBot;
 
@@ -36,12 +37,36 @@ public interface DB {
         telegramUser.getDeleting_messages().clear();
     }
 
-    static Category fetchCategoryByItsName(Message message) {
-        List<Category> list = CATEGORIES.stream().filter(category -> category.getName().equals(message.text())).toList();
+    static void clearMessages(TelegramUser telegramUser, boolean canDeleteProductInfos) {
+        int[] array = telegramUser.getMessageIds_of_products_to_delete_them_later().stream().mapToInt(Integer::intValue).toArray();
+
+        DeleteMessages deleteMessages = new DeleteMessages(
+                telegramUser.getChatId(), array
+        );
+        telegramBot.execute(deleteMessages);
+        telegramUser.getMessageIds_of_products_to_delete_them_later().clear();
+    }
+
+    static Category fetchCategoryByItsName(String text, TelegramUser telegramUser) {
+        Stream<Category> categoryStream = CATEGORIES.stream()
+                .filter(category -> (extraFunctionForFetchCategoryByItsName(category, telegramUser).equals(text)));
+        List<Category> list = categoryStream.toList();
         if (list.isEmpty()) {
             return null;
         }
         return list.get(0);
+    }
+
+    static String extraFunctionForFetchCategoryByItsName(Category category, TelegramUser telegramUser) {
+        switch (telegramUser.getLanguage()) {
+            case RU -> {
+                return category.getNameInRussian();
+            }
+            case EN -> {
+                return category.getNameInEnglish();
+            }
+        }
+        return category.getNameInUzbek();
     }
 
     static List<Product> fetchProductsByCategoryId(Category chosenCategory) {
@@ -68,10 +93,22 @@ public interface DB {
         Category chosenCategory = fetchCategoryByItsId(telegramUser);
 
         return PRODUCTS.stream()
-                .filter(product -> product.getName().equals(message.text()))
+                .filter(product -> extraFunctionForFetchChosenProductById(telegramUser, product).equals(message.text()))
                 .filter(product -> product.getProductStatus().equals(ProductStatus.AVAILABLE))
                 .filter(product -> product.getCategoryId().equals(chosenCategory.getId()))
                 .toList();
+    }
+
+    static String extraFunctionForFetchChosenProductById(TelegramUser telegramUser, Product product) {
+        switch (telegramUser.getLanguage()) {
+            case EN -> {
+                return product.getNameInEnglish();
+            }
+            case RU -> {
+                return product.getNameInRussian();
+            }
+        }
+        return product.getNameInUzbek();
     }
 
     static Category fetchCategoryByItsId(TelegramUser telegramUser) {
@@ -94,13 +131,25 @@ public interface DB {
         return userNew;
     }
 
-    static Restaurant fetchChosenRestaurantByName(String text) {
+    static Restaurant fetchChosenRestaurantByName(String text, TelegramUser telegramUser) {
         List<Restaurant> list = DB.RESTAURANTS
                 .stream()
-                .filter(restaurant -> restaurant.getName().equals(text)).toList();
+                .filter(restaurant -> (extraFunctionForFetchChosenRestaurantByName(telegramUser, restaurant)).contains(text)).toList();
         if (list.isEmpty()) {
             return null;
         }
         return list.get(0);
+    }
+
+    static String extraFunctionForFetchChosenRestaurantByName(TelegramUser telegramUser, Restaurant restaurant) {
+        switch (telegramUser.getLanguage()) {
+            case RU -> {
+                return restaurant.getNameInRussian();
+            }
+            case EN -> {
+                return restaurant.getNameInEnglish();
+            }
+        }
+        return restaurant.getNameInUzbek();
     }
 }

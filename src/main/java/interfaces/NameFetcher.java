@@ -1,5 +1,7 @@
 package interfaces;
 
+import entity.TelegramUser;
+
 public interface NameFetcher {
-    String getTitle();
+    String getTitle(TelegramUser telegramUser);
 }

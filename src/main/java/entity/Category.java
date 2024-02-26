@@ -12,13 +12,23 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class Category implements NameFetcher {
-    private String name;
+    private String nameInUzbek;
+    private String nameInEnglish;
+    private String nameInRussian;
     private final UUID id = UUID.randomUUID();
     private Integer restaurantId;
     private CategoryStatus categoryStatus;
 
     @Override
-    public String getTitle() {
-        return name;
+    public String getTitle(TelegramUser telegramUser) {
+        switch (telegramUser.getLanguage()) {
+            case EN -> {
+                return nameInEnglish;
+            }
+            case RU -> {
+                return nameInRussian;
+            }
+        }
+        return nameInUzbek;
     }
 }

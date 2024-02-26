@@ -72,9 +72,8 @@ public class BotService {
     public static void showRestaurants(TelegramUser telegramUser) {
         DB.clearMessages(telegramUser);
         SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), telegramUser.getText("CHOOSE_RESTAURANT"));
-        sendMessage.replyMarkup(BotUtils.generateRestaurantsBtns());
+        sendMessage.replyMarkup(BotUtils.generateRestaurantsBtns(telegramUser));
         SendResponse execute = telegramBot.execute(sendMessage);
-        System.out.println(execute);
         telegramUser.getDeleting_messages().add(execute.message().messageId());
         telegramUser.setTelegramState(TelegramState.ACCEPTING_RESTAURANT_CHOICE);
     }
@@ -83,20 +82,19 @@ public class BotService {
     public static void acceptRestaurantShowMenuAndRestaurantInfo(TelegramUser telegramUser, Message message) {
         DB.clearMessages(telegramUser);
         telegramUser.getDeleting_messages().add(message.messageId());
-        if (DB.fetchChosenRestaurantByName(message.text()) == null) {
+        if (DB.fetchChosenRestaurantByName(message.text(), telegramUser) == null) {
             SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), telegramUser.getText("WRONG_RESTAURANT"));
             SendResponse execute = telegramBot.execute(sendMessage);
             telegramUser.getDeleting_messages().add(execute.message().messageId());
-            Thread.sleep(2000);
             showRestaurants(telegramUser);
         } else {
-            Restaurant chosenRestaurant = DB.fetchChosenRestaurantByName(message.text());
+            Restaurant chosenRestaurant = DB.fetchChosenRestaurantByName(message.text(), telegramUser);
 
             assert chosenRestaurant != null;
             telegramUser.setChosenRestaurantID(chosenRestaurant.getId());
 
             SendPhoto sendPhoto = new SendPhoto(telegramUser.getChatId(), new File(chosenRestaurant.getPhotoURL()));
-            sendPhoto.caption(telegramUser.getText("RES_INFO_FULL").formatted(chosenRestaurant.getName(), chosenRestaurant.getPhoneNumber()));
+            sendPhoto.caption(telegramUser.getText("RES_INFO_FULL").formatted(chosenRestaurant.getNameInUzbek(), chosenRestaurant.getPhoneNumber()));
             sendPhoto.replyMarkup(BotUtils.generateCancelOrMenuButton(telegramUser));
             SendResponse execute = telegramBot.execute(sendPhoto);
             telegramUser.getDeleting_messages().add(execute.message().messageId());
@@ -124,7 +122,7 @@ public class BotService {
             Restaurant chosenRestaurant = restaurantOptional.get();
             SendPhoto sendPhoto = new SendPhoto(telegramUser.getChatId(), new File("src/main/java/bot/photos/menu.jpg"));
 
-            sendPhoto.replyMarkup(BotUtils.generateMenuButtons(chosenRestaurant));
+            sendPhoto.replyMarkup(BotUtils.generateMenuButtons(chosenRestaurant, telegramUser));
             SendResponse execute = telegramBot.execute(sendPhoto);
             telegramUser.getDeleting_messages().add(execute.message().messageId());
         }
@@ -135,9 +133,9 @@ public class BotService {
         telegramUser.getDeleting_messages().add(message.messageId());
         DB.clearMessages(telegramUser);
 
-        Category chosenCategory = DB.fetchCategoryByItsName(message);
+        Category chosenCategory = DB.fetchCategoryByItsName(message.text(), telegramUser);
 
-        if (BotUtils.generateProductsBtns(chosenCategory) == null) {
+        if (BotUtils.generateProductsBtns(chosenCategory, telegramUser) == null) {
 
             SendMessage sendMessage = new SendMessage(
                     telegramUser.getChatId(),
@@ -147,7 +145,6 @@ public class BotService {
             SendResponse execute = telegramBot.execute(sendMessage);
             telegramUser.getDeleting_messages().add(execute.message().messageId());
 
-            Thread.sleep(2000);
             showMenu(telegramUser);
         } else {
             telegramUser.setChosenCategoryId(chosenCategory.getId());
@@ -156,6 +153,7 @@ public class BotService {
     }
 
     private static void successFullySendingProducts(TelegramUser telegramUser) {
+        DB.clearMessages(telegramUser);
         SendPhoto sendPhoto = new SendPhoto(
                 telegramUser.getChatId(),
                 new File("src/main/java/bot/photos/dishes.jpg")
@@ -164,7 +162,7 @@ public class BotService {
         sendPhoto.caption(telegramUser.getText("PRODUCTS"));
         Category chosenCategory = DB.fetchCategoryByItsId(telegramUser);
 
-        sendPhoto.replyMarkup(BotUtils.generateProductsBtns(chosenCategory));
+        sendPhoto.replyMarkup(BotUtils.generateProductsBtns(chosenCategory, telegramUser));
         SendResponse execute = telegramBot.execute(sendPhoto);
 
         telegramUser.getDeleting_messages().add(execute.message().messageId());
@@ -183,8 +181,9 @@ public class BotService {
                     telegramUser.getText("WRONG_PRODUCT")
             );
             SendResponse execute = telegramBot.execute(sendMessage);
+
             telegramUser.getDeleting_messages().add(execute.message().messageId());
-            acceptCategoryChoiceSendDishes(telegramUser, message);
+            successFullySendingProducts(telegramUser);
         } else {
             Product chosenProduct = products.get(0);
             SendPhoto sendPhoto = new SendPhoto(
@@ -194,10 +193,12 @@ public class BotService {
 
             sendPhoto.caption(getProductInfo(chosenProduct, telegramUser));
             telegramUser.setCounterForProducts(1);
+
             sendPhoto.replyMarkup(BotUtils.generateCounterButton(telegramUser));
             SendResponse execute = telegramBot.execute(sendPhoto);
+            telegramUser.getMessageIds_of_products_to_delete_them_later().add(execute.message().messageId());
             telegramUser.setMessageIdForCounter(execute.message().messageId());
-//            DB.DELETING_MESSAGES.add(execute.message().messageId());
+
             telegramUser.setTelegramState(TelegramState.ACCEPTING_COUNTER_BUTTONS);
         }
     }
@@ -210,7 +211,7 @@ public class BotService {
                      
                        """.formatted(
                 telegramUser.getText("PRODUCT"),
-                chosenProduct.getName(),
+                chosenProduct.getNameInUzbek(),
                 chosenProduct.getDescription(),
                 telegramUser.getText("PRICE"),
                 formatPrice(chosenProduct.getRetailPrice())

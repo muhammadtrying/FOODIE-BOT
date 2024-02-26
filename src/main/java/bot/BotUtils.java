@@ -22,8 +22,8 @@ public class BotUtils {
         );
     }
 
-    public static ReplyKeyboardMarkup generateRestaurantsBtns() {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.RESTAURANTS));
+    public static ReplyKeyboardMarkup generateRestaurantsBtns(TelegramUser telegramUser) {
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.RESTAURANTS,telegramUser));
         replyKeyboardMarkup.resizeKeyboard(true);
         return replyKeyboardMarkup;
     }
@@ -35,22 +35,22 @@ public class BotUtils {
         );
     }
 
-    public static ReplyKeyboardMarkup generateMenuButtons(Restaurant chosenRestaurant) {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.fetchCategoriesByRestaurantId(chosenRestaurant)));
+    public static ReplyKeyboardMarkup generateMenuButtons(Restaurant chosenRestaurant, TelegramUser telegramUser) {
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.fetchCategoriesByRestaurantId(chosenRestaurant), telegramUser));
         replyKeyboardMarkup.resizeKeyboard(true);
         return replyKeyboardMarkup;
     }
 
-    private static String[][] generateBtnMatrix(List<? extends NameFetcher> nameFetchers) {
+    private static String[][] generateBtnMatrix(List<? extends NameFetcher> nameFetchers, TelegramUser telegramUser) {
         int size = nameFetchers.size();
         int rowCount = size % 2 == 0 ? size / 2 : (size + 1) / 2;
         String[][] mrx = new String[rowCount][2];
         int i = 0;
 
         for (String[] row : mrx) {
-            row[0] = nameFetchers.get(i).getTitle();
+            row[0] = nameFetchers.get(i).getTitle(telegramUser);
             if (i + 1 != nameFetchers.size()) {
-                row[1] = nameFetchers.get(i + 1).getTitle();
+                row[1] = nameFetchers.get(i + 1).getTitle(telegramUser);
             }
             i += 2;
         }
@@ -62,12 +62,12 @@ public class BotUtils {
         return mrx;
     }
 
-    public static Keyboard generateProductsBtns(Category chosenCategory) {
+    public static Keyboard generateProductsBtns(Category chosenCategory, TelegramUser telegramUser) {
         if (chosenCategory == null) {
             return null;
         }
 
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.fetchProductsByCategoryId(chosenCategory)));
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.fetchProductsByCategoryId(chosenCategory), telegramUser));
         replyKeyboardMarkup.resizeKeyboard(true);
         return replyKeyboardMarkup;
     }
