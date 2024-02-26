@@ -66,14 +66,36 @@ public class BotService {
     public static void acceptLanguageShowRestaurants(TelegramUser telegramUser, String data) {
         DB.clearMessages(telegramUser);
         telegramUser.setLanguage(Language.valueOf(data));
-        showRestaurants(telegramUser);
+        showMainMenu(telegramUser);
+        telegramUser.setTelegramState(TelegramState.DEALING_WITH_MAIN_MENU);
+    }
+
+    private static void showMainMenu(TelegramUser telegramUser) {
+        SendMessage sendMessage = new SendMessage(telegramUser.getChatId(),
+                generateIntroTextForLosers(telegramUser)
+        );
+
+        sendMessage.replyMarkup(BotUtils.generateMainMenuIntroButtons(telegramUser));
+        SendResponse execute = telegramBot.execute(sendMessage);
+        telegramUser.getDeleting_messages().add(execute.message().messageId());
+    }
+
+    private static String generateIntroTextForLosers(TelegramUser telegramUser) {
+        String fullName = getFullName(telegramUser);
+        return telegramUser.getText("GREETING") + " " + fullName;
     }
 
     public static void showRestaurants(TelegramUser telegramUser) {
         DB.clearMessages(telegramUser);
-        SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), telegramUser.getText("CHOOSE_RESTAURANT"));
+
+        SendMessage sendMessage = new SendMessage(
+                telegramUser.getChatId(),
+                telegramUser.getText("CHOOSE_RESTAURANT")
+        );
+
         sendMessage.replyMarkup(BotUtils.generateRestaurantsBtns(telegramUser));
         SendResponse execute = telegramBot.execute(sendMessage);
+
         telegramUser.getDeleting_messages().add(execute.message().messageId());
         telegramUser.setTelegramState(TelegramState.ACCEPTING_RESTAURANT_CHOICE);
     }
@@ -82,7 +104,12 @@ public class BotService {
     public static void acceptRestaurantShowMenuAndRestaurantInfo(TelegramUser telegramUser, Message message) {
         DB.clearMessages(telegramUser);
         telegramUser.getDeleting_messages().add(message.messageId());
-        if (DB.fetchChosenRestaurantByName(message.text(), telegramUser) == null) {
+
+        if (message.text().equals(telegramUser.getText("RETURN"))) {
+            showMainMenu(telegramUser);
+        } else if (message.text().equals(telegramUser.getText("VIEW_RESTAURANTS"))) {
+            showRestaurants(telegramUser);
+        } else if (DB.fetchChosenRestaurantByName(message.text(), telegramUser) == null) {
             SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), telegramUser.getText("WRONG_RESTAURANT"));
             SendResponse execute = telegramBot.execute(sendMessage);
             telegramUser.getDeleting_messages().add(execute.message().messageId());
@@ -123,6 +150,7 @@ public class BotService {
             SendPhoto sendPhoto = new SendPhoto(telegramUser.getChatId(), new File("src/main/java/bot/photos/menu.jpg"));
 
             sendPhoto.replyMarkup(BotUtils.generateMenuButtons(chosenRestaurant, telegramUser));
+
             SendResponse execute = telegramBot.execute(sendPhoto);
             telegramUser.getDeleting_messages().add(execute.message().messageId());
         }
@@ -133,22 +161,28 @@ public class BotService {
         telegramUser.getDeleting_messages().add(message.messageId());
         DB.clearMessages(telegramUser);
 
-        Category chosenCategory = DB.fetchCategoryByItsName(message.text(), telegramUser);
-
-        if (BotUtils.generateProductsBtns(chosenCategory, telegramUser) == null) {
-
-            SendMessage sendMessage = new SendMessage(
-                    telegramUser.getChatId(),
-                    telegramUser.getText("WRONG_CATEGORY") + "......."
-            );
-
-            SendResponse execute = telegramBot.execute(sendMessage);
-            telegramUser.getDeleting_messages().add(execute.message().messageId());
-
-            showMenu(telegramUser);
+        if (message.text().equals(telegramUser.getText("BACK_TO_RESTAURANTS"))) {
+            showRestaurants(telegramUser);
+        } else if (message.text().equals(telegramUser.getText("VIEW_MY_BASKET"))) {
+            // logic for viewing basket
         } else {
-            telegramUser.setChosenCategoryId(chosenCategory.getId());
-            successFullySendingProducts(telegramUser);
+            Category chosenCategory = DB.fetchCategoryByItsName(message.text(), telegramUser);
+
+            if (BotUtils.generateProductsBtns(chosenCategory, telegramUser) == null) {
+
+                SendMessage sendMessage = new SendMessage(
+                        telegramUser.getChatId(),
+                        telegramUser.getText("WRONG_CATEGORY") + "......."
+                );
+
+                SendResponse execute = telegramBot.execute(sendMessage);
+                telegramUser.getDeleting_messages().add(execute.message().messageId());
+
+                showMenu(telegramUser);
+            } else {
+                telegramUser.setChosenCategoryId(chosenCategory.getId());
+                successFullySendingProducts(telegramUser);
+            }
         }
     }
 
@@ -226,6 +260,7 @@ public class BotService {
         } else if (data.equals(BotConstants.RETURN)) {
             successFullySendingProducts(telegramUser);
         } else if (data.equals(BotConstants.ADD_TO_BASKET)) {
+
             successFullySendingProducts(telegramUser);
         }
 
@@ -242,6 +277,19 @@ public class BotService {
 
     private static String formatPrice(Integer price) {
         return NumberFormat.getNumberInstance().format(price);
+    }
+
+    public static void acceptMainMenuOrder(TelegramUser telegramUser, Message message) {
+
+        telegramUser.getDeleting_messages().add(message.messageId());
+
+        if (message.text().equals(telegramUser.getText("VIEW_RESTAURANTS"))) {
+            showRestaurants(telegramUser);
+        } else if (message.text().equals(telegramUser.getText("MY_ORDERS"))) {
+
+        } else if (message.text().equals(telegramUser.getText("WRITE_COMMENTS"))) {
+
+        }
     }
 }
 

@@ -36,6 +36,8 @@ public class MyBot {
 
                 if (text.equals("/start")) {
                     BotService.acceptStartAskForLanguage(telegramUser, message);
+                } else if (telegramUser.checkState(TelegramState.DEALING_WITH_MAIN_MENU)) {
+                    BotService.acceptMainMenuOrder(telegramUser,message);
                 } else if (telegramUser.checkState(TelegramState.ACCEPTING_RESTAURANT_CHOICE)) {
                     BotService.acceptRestaurantShowMenuAndRestaurantInfo(telegramUser, message);
                 } else if (telegramUser.checkState(TelegramState.ACCEPTING_CATEGORY_CHOICE_AND_SENDING_DISHES)) {
@@ -44,6 +46,8 @@ public class MyBot {
                     BotService.acceptingFoodChoiceNowGivingFullInfoAbout(telegramUser, message);
                 }
             }
+
+
             //working with inline buttons
         } else if (update.callbackQuery() != null) {
             CallbackQuery callbackQuery = update.callbackQuery();
@@ -53,10 +57,8 @@ public class MyBot {
             if (callbackQuery.data() != null) {
                 String data = callbackQuery.data();
                 switch (telegramUser.getTelegramState()) {
-                    case ACCEPTING_LANGUAGE ->
-                        BotService.acceptLanguageShowRestaurants(telegramUser, data);
-                    case ACCEPTING_MENU_OR_CANCEL_BUTTON ->
-                            BotService.acceptChoiceOfMenuOrCancelThenActAccordingly(telegramUser, data);
+                    case ACCEPTING_LANGUAGE ->BotService.acceptLanguageShowRestaurants(telegramUser, data);
+                    case ACCEPTING_MENU_OR_CANCEL_BUTTON ->BotService.acceptChoiceOfMenuOrCancelThenActAccordingly(telegramUser, data);
                     case ACCEPTING_COUNTER_BUTTONS -> BotService.acceptCounterInfoAndChangeIt(telegramUser, data);
                 }
             }

@@ -1,9 +1,6 @@
 package bot;
 
-import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
-import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
-import com.pengrad.telegrambot.model.request.Keyboard;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.*;
 import db.DB;
 import entity.Category;
 import entity.Restaurant;
@@ -23,14 +20,15 @@ public class BotUtils {
     }
 
     public static ReplyKeyboardMarkup generateRestaurantsBtns(TelegramUser telegramUser) {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.RESTAURANTS,telegramUser));
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.RESTAURANTS, telegramUser));
         replyKeyboardMarkup.resizeKeyboard(true);
+        replyKeyboardMarkup.addRow(new KeyboardButton(telegramUser.getText("RETURN")));
         return replyKeyboardMarkup;
     }
 
     public static InlineKeyboardMarkup generateCancelOrMenuButton(TelegramUser telegramUser) {
         return new InlineKeyboardMarkup(
-                new InlineKeyboardButton(telegramUser.getText("RETURN") + "⬅️").callbackData(BotConstants.RETURN),
+                new InlineKeyboardButton(telegramUser.getText("RETURN")).callbackData(BotConstants.RETURN),
                 new InlineKeyboardButton(telegramUser.getText("MENU") + "🍟🍽️").callbackData(BotConstants.MENU)
         );
     }
@@ -38,6 +36,10 @@ public class BotUtils {
     public static ReplyKeyboardMarkup generateMenuButtons(Restaurant chosenRestaurant, TelegramUser telegramUser) {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.fetchCategoriesByRestaurantId(chosenRestaurant), telegramUser));
         replyKeyboardMarkup.resizeKeyboard(true);
+        replyKeyboardMarkup.addRow(
+                new KeyboardButton(telegramUser.getText("BACK_TO_RESTAURANTS")),
+                new KeyboardButton(telegramUser.getText("VIEW_MY_BASKET"))
+        );
         return replyKeyboardMarkup;
     }
 
@@ -82,5 +84,15 @@ public class BotUtils {
         inlineKeyboardMarkup.addRow(new InlineKeyboardButton("⬅️ " + telegramUser.getText("RETURN")).callbackData(BotConstants.RETURN));
         inlineKeyboardMarkup.addRow(new InlineKeyboardButton("✅ " + telegramUser.getText("ADD_TO_BASKET") + "🛒").callbackData(BotConstants.ADD_TO_BASKET));
         return inlineKeyboardMarkup;
+    }
+
+    public static Keyboard generateMainMenuIntroButtons(TelegramUser telegramUser) {
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(
+                new KeyboardButton(telegramUser.getText("VIEW_RESTAURANTS"))
+        );
+        replyKeyboardMarkup.addRow(telegramUser.getText("MY_ORDERS"));
+        replyKeyboardMarkup.addRow(telegramUser.getText("WRITE_COMMENTS"));
+        replyKeyboardMarkup.resizeKeyboard(true);
+        return replyKeyboardMarkup;
     }
 }
