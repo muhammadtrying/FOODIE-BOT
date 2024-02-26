@@ -86,7 +86,10 @@ public interface DB {
         if (telegramUser != null) {
             return telegramUser;
         }
-        TelegramUser userNew = TelegramUser.builder().chatId(chatId).telegramState(TelegramState.START).build();
+        TelegramUser userNew = TelegramUser.builder()
+                .chatId(chatId)
+                .telegramState(TelegramState.START)
+                .build();
         TELEGRAM_USERS.put(chatId, userNew);
         return userNew;
     }

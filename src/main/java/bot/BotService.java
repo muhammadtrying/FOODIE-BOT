@@ -16,6 +16,7 @@ import lombok.SneakyThrows;
 
 import java.io.File;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,8 +55,11 @@ public class BotService {
         sendMessage.replyMarkup(BotUtils.generateLanguageButton());
         SendResponse execute = MyBot.telegramBot.execute(sendMessage);
 
-        telegramUser.getDeleting_messages().add(execute.message().messageId());
 
+        if (telegramUser.getDeleting_messages() == null) {
+            telegramUser.setDeleting_messages(new ArrayList<>());
+        }
+        telegramUser.getDeleting_messages().add(execute.message().messageId());
         telegramUser.setTelegramState(TelegramState.ACCEPTING_LANGUAGE);
     }
 

@@ -46,7 +46,6 @@ public class MyBot {
             }
             //working with inline buttons
         } else if (update.callbackQuery() != null) {
-
             CallbackQuery callbackQuery = update.callbackQuery();
             Long chatId = callbackQuery.from().id();
             TelegramUser telegramUser = DB.getUser(chatId);
