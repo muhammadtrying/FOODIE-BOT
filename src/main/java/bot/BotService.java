@@ -219,6 +219,7 @@ public class BotService {
             telegramUser.getDeleting_messages().add(execute.message().messageId());
             successFullySendingProducts(telegramUser);
         } else {
+
             Product chosenProduct = products.get(0);
             SendPhoto sendPhoto = new SendPhoto(
                     telegramUser.getChatId(),
@@ -230,6 +231,11 @@ public class BotService {
 
             sendPhoto.replyMarkup(BotUtils.generateCounterButton(telegramUser));
             SendResponse execute = telegramBot.execute(sendPhoto);
+
+            if (telegramUser.getMessageIds_of_products_to_delete_them_later() == null) {
+                telegramUser.setMessageIds_of_products_to_delete_them_later(new ArrayList<>());
+            }
+
             telegramUser.getMessageIds_of_products_to_delete_them_later().add(execute.message().messageId());
             telegramUser.setMessageIdForCounter(execute.message().messageId());
 

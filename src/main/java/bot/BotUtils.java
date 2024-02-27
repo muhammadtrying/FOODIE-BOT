@@ -81,7 +81,7 @@ public class BotUtils {
                 new InlineKeyboardButton(String.valueOf(telegramUser.getCounterForProducts())).callbackData("counterWhichDoesntWorkLol"),
                 new InlineKeyboardButton("+").callbackData(BotConstants.PLUS)
         );
-        inlineKeyboardMarkup.addRow(new InlineKeyboardButton("⬅️ " + telegramUser.getText("RETURN")).callbackData(BotConstants.RETURN));
+        inlineKeyboardMarkup.addRow(new InlineKeyboardButton(telegramUser.getText("RETURN")).callbackData(BotConstants.RETURN));
         inlineKeyboardMarkup.addRow(new InlineKeyboardButton("✅ " + telegramUser.getText("ADD_TO_BASKET") + "🛒").callbackData(BotConstants.ADD_TO_BASKET));
         return inlineKeyboardMarkup;
     }
