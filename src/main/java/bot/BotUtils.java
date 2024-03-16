@@ -2,9 +2,7 @@ package bot;
 
 import com.pengrad.telegrambot.model.request.*;
 import db.DB;
-import entity.Category;
-import entity.Restaurant;
-import entity.TelegramUser;
+import entity.*;
 import enums.Language;
 import interfaces.NameFetcher;
 
@@ -71,10 +69,11 @@ public class BotUtils {
 
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup(generateBtnMatrix(DB.fetchProductsByCategoryId(chosenCategory), telegramUser));
         replyKeyboardMarkup.resizeKeyboard(true);
+        replyKeyboardMarkup.addRow(new KeyboardButton(telegramUser.getText("RETURN")), new KeyboardButton((telegramUser.getText("VIEW_MY_BASKET"))));
         return replyKeyboardMarkup;
     }
 
-    public static InlineKeyboardMarkup generateCounterButton(TelegramUser telegramUser) {
+    public static InlineKeyboardMarkup generateCounterButton(TelegramUser telegramUser, boolean isAdded) {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         inlineKeyboardMarkup.addRow(
                 new InlineKeyboardButton("-").callbackData(BotConstants.MINUS),
@@ -82,7 +81,12 @@ public class BotUtils {
                 new InlineKeyboardButton("+").callbackData(BotConstants.PLUS)
         );
         inlineKeyboardMarkup.addRow(new InlineKeyboardButton(telegramUser.getText("RETURN")).callbackData(BotConstants.RETURN));
-        inlineKeyboardMarkup.addRow(new InlineKeyboardButton("✅ " + telegramUser.getText("ADD_TO_BASKET") + "🛒").callbackData(BotConstants.ADD_TO_BASKET));
+
+        if (isAdded) {
+            inlineKeyboardMarkup.addRow(new InlineKeyboardButton(telegramUser.getText("ADDED") + "✅").callbackData("nothing"));
+        } else {
+            inlineKeyboardMarkup.addRow(new InlineKeyboardButton("✅ " + telegramUser.getText("ADD_TO_BASKET") + "🛒").callbackData(BotConstants.ADD_TO_BASKET));
+        }
         return inlineKeyboardMarkup;
     }
 
@@ -94,5 +98,13 @@ public class BotUtils {
         replyKeyboardMarkup.addRow(telegramUser.getText("WRITE_COMMENTS"));
         replyKeyboardMarkup.resizeKeyboard(true);
         return replyKeyboardMarkup;
+    }
+
+    public static Keyboard generateRemoveButtons(TelegramUser telegramUser, Basket basket) {
+        List<BasketProduct> basketProducts = DB.fetchBasketProductsByBasketId(basket);
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        basketProducts.forEach(basketProduct ->
+                inlineKeyboardMarkup.addRow(new InlineKeyboardButton(DB.fetchProductNameById(telegramUser, basketProduct.getProductId()) + " ❌").callbackData("delete/" + basketProduct.getProductId())));
+        return inlineKeyboardMarkup;
     }
 }

@@ -7,15 +7,19 @@ import enums.CategoryStatus;
 import enums.ProductStatus;
 
 public class Main {
-    public static void main(String[] args) {
 
-        //to_be_deleted_later
+    public static void main(String... args) {
+
+
+
+//        to_be_deleted_later
         generateMockData();
 
         MyBot myBot = new MyBot();
         myBot.start();
 
         System.out.println("RUNNING!");
+
     }
 
     private static void generateMockData() {
@@ -38,5 +42,6 @@ public class Main {
         DB.CATEGORIES.add(new Category("Suyuq Ovq313131atlar", "Suyuq Ovq313131atlar in english", "Suyuq Ovq313131atlar in russian", 10, CategoryStatus.ACTIVE));
 
         DB.PRODUCTS.add(new Product("Shashlik", "KEBAB", "Kebab in russian", 10_000, 5_000, DB.CATEGORIES.get(0).getId(), ProductStatus.AVAILABLE, "src/main/java/bot/photos/kebabs.png", "Judayam shirin shashlik"));
+        DB.PRODUCTS.add(new Product("Shashlik 2222", "KEBAB222", "Kebab in russian222", 20_000, 10_000, DB.CATEGORIES.get(0).getId(), ProductStatus.AVAILABLE, "src/main/java/bot/photos/kebabs.png", "Judayam shirin shashlik222"));
     }
 }

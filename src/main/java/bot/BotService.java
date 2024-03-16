@@ -6,10 +6,7 @@ import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SendPhoto;
 import com.pengrad.telegrambot.response.SendResponse;
 import db.DB;
-import entity.Category;
-import entity.Product;
-import entity.Restaurant;
-import entity.TelegramUser;
+import entity.*;
 import enums.Language;
 import enums.TelegramState;
 import lombok.SneakyThrows;
@@ -19,6 +16,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 import static bot.MyBot.telegramBot;
 
@@ -47,10 +45,7 @@ public class BotService {
         telegramUser.setLastName(message.from().lastName());
         telegramUser.setUserName(message.from().username());
 
-        SendMessage sendMessage = new SendMessage(
-                telegramUser.getChatId(),
-                messageTxt
-        );
+        SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), messageTxt);
 
         sendMessage.replyMarkup(BotUtils.generateLanguageButton());
         SendResponse execute = MyBot.telegramBot.execute(sendMessage);
@@ -59,6 +54,7 @@ public class BotService {
         if (telegramUser.getDeleting_messages() == null) {
             telegramUser.setDeleting_messages(new ArrayList<>());
         }
+
         telegramUser.getDeleting_messages().add(execute.message().messageId());
         telegramUser.setTelegramState(TelegramState.ACCEPTING_LANGUAGE);
     }
@@ -71,9 +67,7 @@ public class BotService {
     }
 
     private static void showMainMenu(TelegramUser telegramUser) {
-        SendMessage sendMessage = new SendMessage(telegramUser.getChatId(),
-                generateIntroTextForLosers(telegramUser)
-        );
+        SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), generateIntroTextForLosers(telegramUser));
 
         sendMessage.replyMarkup(BotUtils.generateMainMenuIntroButtons(telegramUser));
         SendResponse execute = telegramBot.execute(sendMessage);
@@ -88,10 +82,7 @@ public class BotService {
     public static void showRestaurants(TelegramUser telegramUser) {
         DB.clearMessages(telegramUser);
 
-        SendMessage sendMessage = new SendMessage(
-                telegramUser.getChatId(),
-                telegramUser.getText("CHOOSE_RESTAURANT")
-        );
+        SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), telegramUser.getText("CHOOSE_RESTAURANT"));
 
         sendMessage.replyMarkup(BotUtils.generateRestaurantsBtns(telegramUser));
         SendResponse execute = telegramBot.execute(sendMessage);
@@ -164,16 +155,13 @@ public class BotService {
         if (message.text().equals(telegramUser.getText("BACK_TO_RESTAURANTS"))) {
             showRestaurants(telegramUser);
         } else if (message.text().equals(telegramUser.getText("VIEW_MY_BASKET"))) {
-            // logic for viewing basket
+            showUsersBasket(telegramUser);
         } else {
             Category chosenCategory = DB.fetchCategoryByItsName(message.text(), telegramUser);
 
             if (BotUtils.generateProductsBtns(chosenCategory, telegramUser) == null) {
 
-                SendMessage sendMessage = new SendMessage(
-                        telegramUser.getChatId(),
-                        telegramUser.getText("WRONG_CATEGORY") + "......."
-                );
+                SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), telegramUser.getText("WRONG_CATEGORY") + ".......");
 
                 SendResponse execute = telegramBot.execute(sendMessage);
                 telegramUser.getDeleting_messages().add(execute.message().messageId());
@@ -188,10 +176,7 @@ public class BotService {
 
     private static void successFullySendingProducts(TelegramUser telegramUser) {
         DB.clearMessages(telegramUser);
-        SendPhoto sendPhoto = new SendPhoto(
-                telegramUser.getChatId(),
-                new File("src/main/java/bot/photos/dishes.jpg")
-        );
+        SendPhoto sendPhoto = new SendPhoto(telegramUser.getChatId(), new File("src/main/java/bot/photos/dishes.jpg"));
 
         sendPhoto.caption(telegramUser.getText("PRODUCTS"));
         Category chosenCategory = DB.fetchCategoryByItsId(telegramUser);
@@ -209,11 +194,13 @@ public class BotService {
 
         List<Product> products = DB.fetchChosenProductById(message, telegramUser);
 
-        if (products.isEmpty()) {
-            SendMessage sendMessage = new SendMessage(
-                    telegramUser.getChatId(),
-                    telegramUser.getText("WRONG_PRODUCT")
-            );
+        if (message.text().equals(telegramUser.getText("VIEW_MY_BASKET"))) {
+            showUsersBasket(telegramUser);
+        } else if (message.text().equals(telegramUser.getText("RETURN"))) {
+            telegramUser.setTelegramState(TelegramState.ACCEPTING_CATEGORY_CHOICE_AND_SENDING_DISHES);
+            showMenu(telegramUser);
+        } else if (products.isEmpty()) {
+            SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), telegramUser.getText("WRONG_PRODUCT"));
             SendResponse execute = telegramBot.execute(sendMessage);
 
             telegramUser.getDeleting_messages().add(execute.message().messageId());
@@ -221,26 +208,68 @@ public class BotService {
         } else {
 
             Product chosenProduct = products.get(0);
-            SendPhoto sendPhoto = new SendPhoto(
-                    telegramUser.getChatId(),
-                    new File(chosenProduct.getPhotoUrl())
-            );
-
+            telegramUser.setChosenProductId(chosenProduct.getId());
+            SendPhoto sendPhoto = new SendPhoto(telegramUser.getChatId(), new File(chosenProduct.getPhotoUrl()));
             sendPhoto.caption(getProductInfo(chosenProduct, telegramUser));
             telegramUser.setCounterForProducts(1);
 
-            sendPhoto.replyMarkup(BotUtils.generateCounterButton(telegramUser));
+            sendPhoto.replyMarkup(BotUtils.generateCounterButton(telegramUser, false));
             SendResponse execute = telegramBot.execute(sendPhoto);
 
-            if (telegramUser.getMessageIds_of_products_to_delete_them_later() == null) {
-                telegramUser.setMessageIds_of_products_to_delete_them_later(new ArrayList<>());
-            }
-
-            telegramUser.getMessageIds_of_products_to_delete_them_later().add(execute.message().messageId());
+            telegramUser.getDeleting_messages().add(execute.message().messageId());
             telegramUser.setMessageIdForCounter(execute.message().messageId());
 
             telegramUser.setTelegramState(TelegramState.ACCEPTING_COUNTER_BUTTONS);
         }
+    }
+
+    private static void addToBasket(TelegramUser telegramUser) {
+        changeMessageAddToBasketToAdded(telegramUser);
+        Basket basket = getBasket(telegramUser);
+
+        BasketProduct basketProduct = getBasketProduct(basket, telegramUser);
+        basketProduct.setAmount(basketProduct.getAmount() + telegramUser.getCounterForProducts());
+        basketProduct.setBasketId(basket.getId());
+        basketProduct.setProductId(telegramUser.getChosenProductId());
+    }
+
+
+    private static void showUsersBasket(TelegramUser telegramUser) {
+        try {
+            Basket basket = getBasket(telegramUser);
+            List<BasketProduct> basketProducts = DB.fetchBasketProductsByBasketId(basket);
+
+            String check = generateCheck(basketProducts, telegramUser);
+
+            SendMessage sendMessage = new SendMessage(telegramUser.getChatId(), check);
+            sendMessage.replyMarkup(BotUtils.generateRemoveButtons(telegramUser, basket));
+            SendResponse execute = telegramBot.execute(sendMessage);
+            telegramUser.getDeleting_messages().add(execute.message().messageId());
+        } catch (Exception e) {
+            throw new RuntimeException();
+        }
+    }
+
+    private static BasketProduct getBasketProduct(Basket basket, TelegramUser telegramUser) {
+        List<BasketProduct> basketProducts = DB.BASKET_PRODUCTS.stream()
+                .filter(basketProduct -> basketProduct.getBasketId().equals(basket.getId()))
+                .filter(item -> item.getProductId().equals(telegramUser.getChosenProductId())).toList();
+        if (basketProducts.isEmpty()) {
+            BasketProduct basketProduct = new BasketProduct();
+            DB.BASKET_PRODUCTS.add(basketProduct);
+            return basketProduct;
+        }
+        return basketProducts.get(0);
+    }
+
+    private static String generateCheck(List<BasketProduct> basketProducts, TelegramUser telegramUser) {
+        StringJoiner stringJoiner = new StringJoiner("\n", telegramUser.getText("YOUR_BASKET") + "\n", "\n=====================================");
+
+        for (BasketProduct basketProduct : basketProducts) {
+            Product chosenProduct = DB.fetchChosenProductByName(basketProduct.getProductId());
+            stringJoiner.add(String.format("%s: %s sum ✖️ %d 🟰%s", chosenProduct.getTitle(telegramUser), formatPrice(chosenProduct.getRetailPrice()), basketProduct.getAmount(), formatPrice(basketProduct.getAmount() * chosenProduct.getRetailPrice())));
+        }
+        return stringJoiner.toString();
     }
 
     private static String getProductInfo(Product chosenProduct, TelegramUser telegramUser) {
@@ -249,13 +278,7 @@ public class BotService {
                 ℹ️🗯️ %s
                 🏷️ %s %s so'm
                      
-                       """.formatted(
-                telegramUser.getText("PRODUCT"),
-                chosenProduct.getNameInUzbek(),
-                chosenProduct.getDescription(),
-                telegramUser.getText("PRICE"),
-                formatPrice(chosenProduct.getRetailPrice())
-        );
+                       """.formatted(telegramUser.getText("PRODUCT"), chosenProduct.getNameInUzbek(), chosenProduct.getDescription(), telegramUser.getText("PRICE"), formatPrice(chosenProduct.getRetailPrice()));
     }
 
     public static void acceptCounterInfoAndChangeIt(TelegramUser telegramUser, String data) {
@@ -264,25 +287,36 @@ public class BotService {
         } else if (data.equals(BotConstants.MINUS) && (telegramUser.getCounterForProducts() != 1)) {
             telegramUser.setCounterForProducts(telegramUser.getCounterForProducts() - 1);
         } else if (data.equals(BotConstants.RETURN)) {
+            telegramUser.setMessageIdForCounter(null);
             successFullySendingProducts(telegramUser);
         } else if (data.equals(BotConstants.ADD_TO_BASKET)) {
-
+            addToBasket(telegramUser);
             successFullySendingProducts(telegramUser);
+            return;
         }
 
 
-        EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup(
-                telegramUser.getChatId(),
-                telegramUser.getMessageIdForCounter()
-        );
+        EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup(telegramUser.getChatId(), telegramUser.getMessageIdForCounter());
 
 
-        editMessageReplyMarkup.replyMarkup(BotUtils.generateCounterButton(telegramUser));
+        editMessageReplyMarkup.replyMarkup(BotUtils.generateCounterButton(telegramUser, false));
         telegramBot.execute(editMessageReplyMarkup);
     }
 
-    private static String formatPrice(Integer price) {
-        return NumberFormat.getNumberInstance().format(price);
+    private static void changeMessageAddToBasketToAdded(TelegramUser telegramUser) {
+        EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup(telegramUser.getChatId(), telegramUser.getMessageIdForCounter());
+        editMessageReplyMarkup.replyMarkup(BotUtils.generateCounterButton(telegramUser, true));
+        telegramBot.execute(editMessageReplyMarkup);
+    }
+
+    private static Basket getBasket(TelegramUser telegramUser) {
+        List<Basket> list = DB.BASKETS.stream().filter(basket -> basket.getChatId_asUserId().equals(telegramUser.getChatId())).toList();
+        if (!list.isEmpty()) {
+            return list.get(0);
+        }
+        Basket basket = Basket.builder().chatId_asUserId(telegramUser.getChatId()).build();
+        DB.BASKETS.add(basket);
+        return basket;
     }
 
     public static void acceptMainMenuOrder(TelegramUser telegramUser, Message message) {
@@ -297,9 +331,9 @@ public class BotService {
 
         }
     }
+
+
+    private static String formatPrice(Integer price) {
+        return NumberFormat.getNumberInstance().format(price);
+    }
 }
-
-
-
-
-

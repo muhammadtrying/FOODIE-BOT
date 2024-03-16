@@ -18,7 +18,7 @@ public class MyBot {
     public static TelegramBot telegramBot = new TelegramBot("6344817090:AAFL7AqYKYYNJsv-t0rw0Y-SHMHXqclLsc4");
     public static ExecutorService executorService = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
-    public void start() {
+    public void  start() {
         telegramBot.setUpdatesListener((updates) -> {
             executorService.submit(() -> updates.forEach(this::handleUpdate));
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
@@ -51,11 +51,13 @@ public class MyBot {
             //working with inline buttons
         } else if (update.callbackQuery() != null) {
             CallbackQuery callbackQuery = update.callbackQuery();
+
             Long chatId = callbackQuery.from().id();
             TelegramUser telegramUser = DB.getUser(chatId);
 
             if (callbackQuery.data() != null) {
                 String data = callbackQuery.data();
+
                 switch (telegramUser.getTelegramState()) {
                     case ACCEPTING_LANGUAGE ->BotService.acceptLanguageShowRestaurants(telegramUser, data);
                     case ACCEPTING_MENU_OR_CANCEL_BUTTON ->BotService.acceptChoiceOfMenuOrCancelThenActAccordingly(telegramUser, data);
