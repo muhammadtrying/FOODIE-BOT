@@ -15,7 +15,7 @@ import java.util.concurrent.Executors;
 public class MyBot {
 
     public static final Integer NUMBER_OF_THREADS = 50;
-    public static TelegramBot telegramBot = new TelegramBot("6344817090:AAFL7AqYKYYNJsv-t0rw0Y-SHMHXqclLsc4");
+    public static TelegramBot telegramBot = new TelegramBot(""); // add tg bot token
     public static ExecutorService executorService = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
     public void  start() {
